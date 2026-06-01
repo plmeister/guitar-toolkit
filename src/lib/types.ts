@@ -1,7 +1,6 @@
 export type StringMatch = {
   string: GuitarString;
   cents: number;
-  frequency: number;
 };
 
 export type GuitarString = {

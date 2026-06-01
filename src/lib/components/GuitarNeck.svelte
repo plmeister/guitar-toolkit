@@ -1,17 +1,19 @@
 <script lang="ts">
   import type { GuitarString } from "$lib/types";
 
-  export let strings: GuitarString[] = [];
+  export let strings: GuitarString[];
   export let centsByString: Record<string, number> = {};
-  export let selected: GuitarString | null = null;
-  export let onSelect: (s: GuitarString) => void = () => {};
+  export let selected: string | null = null;
+
+  export let onSelect: (s: GuitarString) => void;
 </script>
 
 <div class="neck">
   {#each strings as s (s.name)}
     <button
+      type="button"
       class="string-row"
-      class:selected={selected?.name === s.name}
+      class:selected={selected === s.name}
       onclick={() => onSelect(s)}
     >
       <div class="label">{s.name}</div>
@@ -35,7 +37,6 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    margin-top: 20px;
   }
 
   .string-row {
@@ -50,12 +51,6 @@
 
   .string-row.selected {
     background: rgba(255, 255, 255, 0.08);
-  }
-
-  .label {
-    font-weight: bold;
-    text-align: right;
-    padding-right: 10px;
   }
 
   .rail {
@@ -74,10 +69,8 @@
     transform: translateX(-50%);
   }
 
-  .value {
-    font-size: 12px;
-    opacity: 0.7;
-    text-align: left;
-    padding-left: 10px;
+  .label {
+    text-align: right;
+    padding-right: 10px;
   }
 </style>

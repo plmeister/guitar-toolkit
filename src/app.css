@@ -1,0 +1,22 @@
+:root {
+  --bg: #0b0f14;
+  --surface: #121824;
+  --surface-2: #1a2233;
+
+  --text: #e6edf3;
+  --muted: #9aa4b2;
+
+  --accent: #4cc9f0;
+  --good: #2dd4bf;
+  --warn: #fbbf24;
+  --bad: #fb7185;
+
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, sans-serif;
+}

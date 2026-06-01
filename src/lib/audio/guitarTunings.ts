@@ -13,6 +13,14 @@ export const STANDARD_TUNING: Tuning = {
   ],
 };
 
+export const DROP_D: Tuning = {
+  name: "Drop D",
+  strings: [
+    { name: "D2", frequency: 73.42 },
+    ...STANDARD_TUNING.strings.slice(1),
+  ],
+};
+
 export function playString(string: GuitarString) {
   return playFrequency(string.frequency, 0.6);
 }

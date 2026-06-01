@@ -1,4 +1,5 @@
 <script>
+  import "../app.css";
   import { resolve } from "$app/paths";
 </script>
 
@@ -6,11 +7,15 @@
   <a href={resolve("/")}>Home</a>
 </nav>
 
-<main>
+<main class="app">
   <slot />
 </main>
 
 <style>
+  .app {
+    min-height: 100vh;
+    background: var(--bg);
+  }
   nav {
     display: flex;
     gap: 1rem;

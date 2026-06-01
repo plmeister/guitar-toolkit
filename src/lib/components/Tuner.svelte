@@ -1,70 +1,66 @@
 <script lang="ts">
-  import { Tuner } from "$lib/audio/tuner";
-  import { STANDARD_TUNING, playString } from "$lib/audio/guitarTunings";
-  import { detectString } from "$lib/audio/stringDetection";
-  import type { StringMatch } from "$lib/types";
   import GuitarNeck from "$lib/components/GuitarNeck.svelte";
+  import { STANDARD_TUNING, DROP_D } from "$lib/audio/guitarTunings";
+  import type { Tuning } from "$lib/types";
+  import { AudioSource } from "$lib/audio/tuner/audioSource";
+  import { TunerEngine } from "$lib/audio/tuner/tunerEngine";
+  import { playReferenceTone } from "$lib/audio/referenceTone";
 
-  const tuner = new Tuner();
+  const tunings: Tuning[] = [STANDARD_TUNING, DROP_D];
 
-  let running = $state(false);
-
-  let frequency = $state(0);
-
-  let detectedString = $state("");
-  let cents = $state(0);
-
+  let activeTuning = $state(STANDARD_TUNING);
   let selectedString = $state(STANDARD_TUNING.strings[5]);
 
-  let displayString = $state("");
-  let displayCents = $state(0);
-
-  let lastString = "";
-  let holdCount = 0;
-
+  let running = $state(false);
+  let frequency = $state(0);
+  let detectedString = $state("");
   let centsByString = $state<Record<string, number>>({});
 
-  function update(match: StringMatch) {
-    centsByString = {
-      ...centsByString,
-      [match.string.name]: match.cents,
-    };
+  let audioContext: AudioContext;
+  let analyser: AnalyserNode;
+  let engine: TunerEngine;
+
+  async function initAudio() {
+    if (!audioContext) {
+      audioContext = new AudioContext();
+      analyser = audioContext.createAnalyser();
+    }
+
+    if (audioContext.state === "suspended") {
+      await audioContext.resume();
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const source = audioContext.createMediaStreamSource(stream);
+    source.connect(analyser);
+
+    const audioSource = new AudioSource(analyser);
+    engine = new TunerEngine(audioSource, activeTuning);
+
+    engine.on("state", (s) => (running = s.running));
+    engine.on("frequency", (f) => (frequency = f.frequency));
+    engine.on("match", (m) => (detectedString = m.string.name));
+    engine.on("stableMatch", (m) => {
+      centsByString = {
+        ...centsByString,
+        [m.string.name]: m.cents,
+      };
+    });
+  }
+
+  function setTuning(t: Tuning) {
+    activeTuning = t;
+    selectedString = t.strings[Math.min(5, t.strings.length - 1)];
+    engine?.setTuning(t);
   }
 
   async function start() {
-    await tuner.start(({ frequency: freq }) => {
-      frequency = freq;
-
-      const match = detectString(freq, STANDARD_TUNING);
-
-      if (!match) return;
-
-      detectedString = match.string.name;
-      cents = match.cents;
-      update(match);
-      updateStability(match.string.name, match.cents);
-    });
-
-    running = true;
+    if (!engine) await initAudio();
+    engine.start();
   }
 
   function stop() {
-    tuner.stop();
-    running = false;
-  }
-
-  function updateStability(name: string, c: number) {
-    if (name === lastString) {
-      holdCount++;
-    } else {
-      holdCount = 0;
-      lastString = name;
-    }
-
-    if (holdCount >= 3) {
-      displayString = name;
-      displayCents = c;
-    }
+    engine.stop();
   }
 
   function guidance(cents: number) {
@@ -73,89 +69,117 @@
   }
 
   function centsPosition() {
-    const clamped = Math.max(-50, Math.min(50, displayCents));
+    const c = centsByString[detectedString] ?? 0;
+    const clamped = Math.max(-50, Math.min(50, c));
     return clamped + 50;
-  }
-
-  function playSelected() {
-    playString(selectedString);
   }
 </script>
 
-<h2>Tuner</h2>
+<div class="tuner">
+  <!-- HEADER CONTROLS -->
+  <div class="controls">
+    <select bind:value={activeTuning} onchange={() => setTuning(activeTuning)}>
+      {#each tunings as t}
+        <option value={t}>{t.name}</option>
+      {/each}
+    </select>
 
-{#if !running}
-  <button onclick={start}>Start</button>
-{:else}
-  <button onclick={stop}>Stop</button>
-{/if}
-
-<!-- STRING SELECTOR / DIAGRAM -->
-
-<GuitarNeck
-  strings={STANDARD_TUNING.strings}
-  {centsByString}
-  selected={selectedString}
-  onSelect={(s) => (selectedString = s)}
-/>
-
-<button onclick={playSelected}> Play Reference Tone </button>
-
-<!-- MAIN DISPLAY -->
-<div class="display">
-  <div class="string">
-    {displayString || detectedString}
+    {#if !running}
+      <button onclick={start}>Start</button>
+    {:else}
+      <button onclick={stop}>Stop</button>
+    {/if}
   </div>
 
-  <div class="freq">
-    {frequency.toFixed(1)} Hz
+  <!-- GUITAR NECK -->
+  <GuitarNeck
+    strings={activeTuning.strings}
+    {centsByString}
+    selected={selectedString.name}
+    onSelect={(s) => {
+      selectedString = s;
+      playReferenceTone(s.frequency);
+    }}
+  />
+
+  <!-- DISPLAY -->
+  <div class="display">
+    <div class="string">{detectedString || selectedString.name}</div>
+    <div class="freq">{frequency.toFixed(1)} Hz</div>
+    <div class="guide">{guidance(centsByString[detectedString] ?? 0)}</div>
   </div>
 
-  <div class="cents">
-    {displayCents.toFixed(1)} cents
+  <!-- TUNING BAR -->
+  <div class="bar">
+    <div class="needle" style:left="{centsPosition()}%"></div>
   </div>
-
-  <div class="guide">
-    {guidance(displayCents)}
-  </div>
-</div>
-
-<!-- TUNING BAR -->
-<div class="bar">
-  <div class="needle" style:left="{centsPosition()}%"></div>
 </div>
 
 <style>
+  .tuner {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }
+
+  .controls {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    gap: 0.5rem;
+  }
+
+  select,
+  button {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 0.4rem 0.6rem;
+    border-radius: 8px;
+  }
+
   .display {
     text-align: center;
-    margin: 2rem 0;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
   }
 
   .string {
-    font-size: 4rem;
-    font-weight: bold;
+    font-size: 3.5rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  .freq {
+    color: var(--muted);
+    margin-top: 0.25rem;
   }
 
   .guide {
-    margin-top: 0.5rem;
-    font-size: 1.5rem;
-    opacity: 0.8;
+    margin-top: 0.75rem;
+    font-size: 1.2rem;
+    color: var(--text);
   }
 
   .bar {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    height: 10px;
     position: relative;
-    height: 20px;
-    border: 1px solid #999;
-    border-radius: 6px;
     margin-top: 1.5rem;
   }
 
   .needle {
     position: absolute;
-    top: -5px;
-    width: 4px;
-    height: 30px;
-    background: red;
+    top: -6px;
+    width: 3px;
+    height: 22px;
+    background: var(--accent);
     transform: translateX(-50%);
+    box-shadow: 0 0 10px var(--accent);
   }
 </style>
