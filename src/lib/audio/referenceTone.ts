@@ -1,6 +1,6 @@
 let refCtx: AudioContext | null = null;
 
-function playReference(frequency: number) {
+export function playReference(frequency: number) {
   if (!refCtx) refCtx = new AudioContext();
 
   const osc = refCtx.createOscillator();
