@@ -1,13 +1,36 @@
-let audioContext: AudioContext | null = null;
+let ctx: AudioContext | null = null;
+let masterGain: GainNode | null = null;
+let unlocked = false;
 
-export async function getAudioContext(): Promise<AudioContext> {
-  if (!audioContext) {
-    audioContext = new AudioContext();
+export function getAudioContext(): AudioContext {
+  if (!ctx) {
+    ctx = new AudioContext();
+
+    masterGain = ctx.createGain();
+    masterGain.gain.value = 0.8;
+    masterGain.connect(ctx.destination);
   }
 
-  if (audioContext.state === "suspended") {
-    await audioContext.resume();
+  return ctx;
+}
+
+export function getMasterGain(): GainNode {
+  if (!masterGain) {
+    getAudioContext();
+  }
+  return masterGain!;
+}
+
+export async function unlockAudio(): Promise<void> {
+  const c = getAudioContext();
+
+  if (c.state === "suspended") {
+    await c.resume();
   }
 
-  return audioContext;
+  unlocked = true;
+}
+
+export function isAudioUnlocked() {
+  return unlocked;
 }

@@ -3,28 +3,31 @@
   import ChordDiagram from "$lib/components/ChordDiagram.svelte";
   import { playChord } from "$lib/audio/chords/playChord";
   import { generateVoicings } from "$lib/audio/chords/voicing";
+  import { getAudioContext } from "$lib/audio/audioEngine";
 
-  let root = "C";
-  let type: keyof typeof CHORDS = "major";
+  let root = $state("C");
+  let type: keyof typeof CHORDS = $state("major");
 
-  $: chord = CHORDS[type];
+  const chord = $derived(CHORDS[type]);
 
-  $: highlighted = NOTES.map((_, i) => {
-    const rootIndex = NOTES.indexOf(root);
-    return chord.intervals.map((iv) => NOTES[(rootIndex + iv) % 12]);
-  }).flat();
+  const highlighted = $derived(
+    NOTES.map((_, i) => {
+      const rootIndex = NOTES.indexOf(root);
+      return chord.intervals.map((iv) => NOTES[(rootIndex + iv) % 12]);
+    }).flat(),
+  );
 
-  $: chordModel = {
+  const chordModel = $derived({
     root: NOTES.indexOf(root),
     intervals: chord.intervals,
-  };
+  });
 
-  $: voicings = generateVoicings(chordModel);
+  const voicings = $derived(generateVoicings(chordModel));
 
-  let selectedVoicing = 0;
+  let selectedVoicing = $state(0);
+
+  let ctx = getAudioContext();
 </script>
-
-<h1>Chord Library</h1>
 
 <div class="controls">
   <select bind:value={root}>
@@ -39,23 +42,19 @@
     {/each}
   </select>
 
-  <button on:click={() => playChord(root, chord.intervals)}> Play </button>
+  <button onclick={() => playChord(ctx, chord.intervals)}> Play </button>
 </div>
 
 <div class="info">
-  <h2>{root} {chord.name}</h2>
-
-  <p>Intervals: {chord.intervals.join(", ")}</p>
-
   <p>
-    Notes:
+    Intervals: {chord.intervals.join(", ")}, Notes:
     {chord.intervals
       .map((i) => NOTES[(NOTES.indexOf(root) + i) % 12])
       .join(" - ")}
   </p>
 </div>
 {#each voicings as v, i}
-  <button on:click={() => (selectedVoicing = i)}>
+  <button onclick={() => (selectedVoicing = i)}>
     Voicing {i + 1}
   </button>
 {/each}
