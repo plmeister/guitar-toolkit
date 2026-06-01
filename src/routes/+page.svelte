@@ -9,6 +9,7 @@
   <button onclick={() => goto(resolve("/tuner"))}> Tuner </button>
 
   <button onclick={() => goto(resolve("/metronome"))}> Metronome </button>
+  <button onclick={() => goto(resolve("/chords"))}> Chords </button>
 </div>
 
 <style>
