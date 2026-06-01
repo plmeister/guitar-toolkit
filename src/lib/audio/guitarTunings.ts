@@ -1,14 +1,5 @@
 import { playFrequency } from "./tones";
-
-export type GuitarString = {
-  name: string;
-  frequency: number;
-};
-
-export type Tuning = {
-  name: string;
-  strings: GuitarString[];
-};
+import type { GuitarString, Tuning } from "$lib/types";
 
 export const STANDARD_TUNING: Tuning = {
   name: "Standard",

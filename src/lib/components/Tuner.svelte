@@ -2,6 +2,8 @@
   import { Tuner } from "$lib/audio/tuner";
   import { STANDARD_TUNING, playString } from "$lib/audio/guitarTunings";
   import { detectString } from "$lib/audio/stringDetection";
+  import type { StringMatch } from "$lib/types";
+  import GuitarNeck from "$lib/components/GuitarNeck.svelte";
 
   const tuner = new Tuner();
 
@@ -20,6 +22,15 @@
   let lastString = "";
   let holdCount = 0;
 
+  let centsByString = $state<Record<string, number>>({});
+
+  function update(match: StringMatch) {
+    centsByString = {
+      ...centsByString,
+      [match.string.name]: match.cents,
+    };
+  }
+
   async function start() {
     await tuner.start(({ frequency: freq }) => {
       frequency = freq;
@@ -30,7 +41,7 @@
 
       detectedString = match.string.name;
       cents = match.cents;
-
+      update(match);
       updateStability(match.string.name, match.cents);
     });
 
@@ -80,16 +91,13 @@
 {/if}
 
 <!-- STRING SELECTOR / DIAGRAM -->
-<div class="strings">
-  {#each STANDARD_TUNING.strings as s}
-    <button
-      class:selected={selectedString.name === s.name}
-      onclick={() => (selectedString = s)}
-    >
-      {s.name}
-    </button>
-  {/each}
-</div>
+
+<GuitarNeck
+  strings={STANDARD_TUNING.strings}
+  {centsByString}
+  selected={selectedString}
+  onSelect={(s) => (selectedString = s)}
+/>
 
 <button onclick={playSelected}> Play Reference Tone </button>
 
@@ -118,22 +126,6 @@
 </div>
 
 <style>
-  .strings {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-bottom: 1rem;
-  }
-
-  .strings button {
-    padding: 0.4rem 0.6rem;
-  }
-
-  .strings button.selected {
-    background: #333;
-    color: white;
-  }
-
   .display {
     text-align: center;
     margin: 2rem 0;

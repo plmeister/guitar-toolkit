@@ -1,10 +1,4 @@
-import type { Tuning, GuitarString } from "./guitarTunings";
-
-export type StringMatch = {
-  string: GuitarString;
-  cents: number;
-  frequency: number;
-};
+import type { StringMatch, Tuning } from "$lib/types";
 
 export function detectString(
   frequency: number,
