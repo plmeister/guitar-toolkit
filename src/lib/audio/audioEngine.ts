@@ -1,8 +1,12 @@
+import { browser } from "$app/environment";
+
 let ctx: AudioContext | null = null;
 let masterGain: GainNode | null = null;
 let unlocked = false;
 
-export function getAudioContext(): AudioContext {
+export function getAudioContext(): AudioContext | null {
+  if (!browser) return null;
+
   if (!ctx) {
     ctx = new AudioContext();
 
@@ -24,8 +28,8 @@ export function getMasterGain(): GainNode {
 export async function unlockAudio(): Promise<void> {
   const c = getAudioContext();
 
-  if (c.state === "suspended") {
-    await c.resume();
+  if (c?.state === "suspended") {
+    await c?.resume();
   }
 
   unlocked = true;

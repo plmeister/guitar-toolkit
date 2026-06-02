@@ -11,6 +11,12 @@
 
   let knobEl: HTMLDivElement;
 
+  let lastPointerAngle = 0;
+  const MIN_BPM = 40;
+  const MAX_BPM = 240;
+
+  let dragging = false;
+
   onMount(() => {
     knobEl?.focus();
   });
@@ -20,16 +26,22 @@
     pulseId += 1;
   };
 
-  const MIN_BPM = 40;
-  const MAX_BPM = 240;
-
-  let dragging = false;
-  let lastY = 0;
-
   // sync BPM to engine
   $effect(() => {
     metronome.setBpm(bpm);
   });
+
+  const clamp = (v: number, min: number, max: number) =>
+    Math.max(min, Math.min(max, v));
+
+  function getAngle(e: PointerEvent) {
+    const rect = knobEl.getBoundingClientRect();
+
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    return (Math.atan2(e.clientY - cy, e.clientX - cx) * 180) / Math.PI;
+  }
 
   function start() {
     metronome.setBpm(bpm);
@@ -47,31 +59,35 @@
   }
 
   let moved = false;
-  let inputMode: "drag" | "wheel" | null = null;
 
   function onPointerDown(e: PointerEvent) {
     dragging = true;
     moved = false;
-    lastY = e.clientY;
-    inputMode = "drag";
 
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    knobEl.setPointerCapture(e.pointerId);
+    lastPointerAngle = getAngle(e);
   }
 
   function onPointerMove(e: PointerEvent) {
     if (!dragging) return;
 
-    const delta = lastY - e.clientY;
-    if (Math.abs(delta) > 2) moved = true;
+    const angle = getAngle(e);
+    let delta = angle - lastPointerAngle;
 
-    lastY = e.clientY;
+    if (delta > 100) delta -= 360;
+    if (delta < -100) delta += 360;
 
-    bpm = Math.max(MIN_BPM, Math.min(MAX_BPM, bpm + Math.round(delta * 0.5)));
+    lastPointerAngle = angle;
+
+    if (Math.abs(delta) > 0.01) moved = true;
+
+    const sensitivity = 0.6;
+    bpm = Math.round(clamp(bpm + delta * sensitivity, MIN_BPM, MAX_BPM));
   }
 
   function onPointerUp(e: PointerEvent) {
     dragging = false;
-    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    knobEl.releasePointerCapture(e.pointerId);
 
     if (!moved) toggle(); // treat as tap only if no drag
   }
@@ -79,7 +95,6 @@
   function onWheel(e: WheelEvent) {
     if (dragging) return;
     e.preventDefault();
-    inputMode = "wheel";
 
     const delta = Math.sign(e.deltaY);
 

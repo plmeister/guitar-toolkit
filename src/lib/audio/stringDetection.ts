@@ -26,7 +26,6 @@ export function detectString(
   candidates.sort((a, b) => a.absCents - b.absCents);
 
   const best = candidates[0];
-  const second = candidates[1];
 
   if (!best) return null;
 

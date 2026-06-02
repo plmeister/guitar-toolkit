@@ -1,7 +1,8 @@
 import { getAudioContext } from "./audioEngine";
 
 export async function playFrequency(frequency: number, duration = 0.5) {
-  const ctx = await getAudioContext();
+  const ctx = getAudioContext();
+  if (!ctx) return;
 
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();

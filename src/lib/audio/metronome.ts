@@ -29,6 +29,7 @@ export class Metronome {
     this.isRunning = true;
 
     const context = getAudioContext();
+    if (!context) return;
 
     this.currentBeat = 0;
     this.nextNoteTime = context.currentTime;
@@ -41,6 +42,7 @@ export class Metronome {
 
   private async scheduler() {
     const context = getAudioContext();
+    if (!context) return;
 
     while (this.nextNoteTime < context.currentTime + this.scheduleAheadTime) {
       this.scheduleClick(this.currentBeat, this.nextNoteTime, context);

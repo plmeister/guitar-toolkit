@@ -1,5 +1,3 @@
-import { midiToFreq } from "../pitch";
-import { getAudioContext } from "../audioEngine";
 import { pluckString } from "../pluck";
 
 export function playChord(

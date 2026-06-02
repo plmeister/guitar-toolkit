@@ -1,7 +1,6 @@
 import { getAudioContext } from "./audioEngine";
 import { detectPitch } from "./pitchDetection";
-import { STANDARD_TUNING } from "$lib/audio/guitarTunings";
-import { detectString } from "$lib/audio/stringDetection";
+
 export type PitchUpdate = {
   frequency: number;
 };
@@ -26,7 +25,8 @@ export class Tuner {
       },
     });
 
-    const context = await getAudioContext();
+    const context = getAudioContext();
+    if (!context) return;
 
     const source = context.createMediaStreamSource(this.stream);
 
