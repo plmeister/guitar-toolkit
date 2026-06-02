@@ -180,20 +180,24 @@
 <style>
   @keyframes beatPulse {
     0% {
-      transform: translate(-50%, -50%) translateY(-61px) scale(1);
+      transform: translate(-50%, -50%) translateY(calc(var(--radius) * -0.78))
+        scale(1);
       box-shadow: 0 0 0 rgba(59, 130, 246, 0);
     }
 
-    35% {
-      transform: translate(-50%, -50%) translateY(-61px) scale(1.55);
+    25% {
+      transform: translate(-50%, -50%) translateY(calc(var(--radius) * -0.78))
+        scale(1.55);
       box-shadow: 0 0 16px rgba(59, 130, 246, 0.9);
     }
 
     100% {
-      transform: translate(-50%, -50%) translateY(-61px) scale(1);
+      transform: translate(-50%, -50%) translateY(calc(var(--radius) * -0.78))
+        scale(1);
       box-shadow: 0 0 0 rgba(59, 130, 246, 0);
     }
   }
+
   .wrap {
     display: flex;
     flex-direction: column;
@@ -204,8 +208,11 @@
 
   /* knob */
   .knob {
-    width: 150px;
-    height: 150px;
+    --size: clamp(220px, 55vw, 360px);
+    --radius: calc(var(--size) / 2);
+
+    width: var(--size);
+    height: var(--size);
     border-radius: 50%;
     position: relative;
     display: grid;
@@ -228,14 +235,14 @@
   .knob.stopped {
     border-color: #ef4444;
   }
+
   .indicator {
     position: absolute;
     inset: 0;
-
     transform-origin: center center;
-
     pointer-events: none;
   }
+
   .needle {
     position: absolute;
 
@@ -248,7 +255,7 @@
     left: 50%;
     top: 50%;
 
-    transform: translate(-50%, -50%) translateY(-61px);
+    transform: translate(-50%, -50%) translateY(calc(var(--radius) * -0.78));
 
     animation: beatPulse 90ms ease-out;
   }
@@ -302,10 +309,10 @@
   }
 
   .tick.min {
-    transform: rotate(-135deg) translateY(-75px);
+    transform: rotate(-135deg) translateY(calc(var(--radius) * -1.1));
   }
 
   .tick.max {
-    transform: rotate(135deg) translateY(-75px);
+    transform: rotate(135deg) translateY(calc(var(--radius) * -1.1));
   }
 </style>
