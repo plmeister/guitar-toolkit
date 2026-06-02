@@ -1,8 +1,10 @@
 <script lang="ts">
   import type { NoteEvent } from "$lib/audio/note";
 
-  export let notes: NoteEvent[] = [];
-  export let name = "";
+  let { notes = [], name = "" } = $props<{
+    notes: NoteEvent[];
+    name?: string;
+  }>();
 
   const strings = ["E", "A", "D", "G", "B", "e"];
   const fretCount = 5;
@@ -13,13 +15,15 @@
   const xStep = width / (strings.length - 1);
   const yStep = height / fretCount;
 
-  $: frets = notes.map((n) => n.fret);
-  $: validFrets = frets.filter((f): f is number => f !== null && f > 0);
+  const frets = $derived(notes.map((n: NoteEvent) => n.fret));
+  const validFrets = $derived(
+    frets.filter((f: number | null): f is number => f !== null && f > 0),
+  );
 
-  $: minFret = validFrets.length ? Math.min(...validFrets) : 1;
-  $: maxFret = validFrets.length ? Math.max(...validFrets) : 4;
+  const minFret = $derived(validFrets.length ? Math.min(...validFrets) : 1);
+  const maxFret = $derived(validFrets.length ? Math.max(...validFrets) : 4);
 
-  $: startFret = maxFret <= 4 ? 1 : minFret;
+  const startFret = $derived(maxFret <= 4 ? 1 : minFret);
 
   function x(stringIndex: number) {
     return stringIndex * xStep;
@@ -27,11 +31,6 @@
 
   function y(fret: number) {
     return (fret - startFret + 0.5) * yStep;
-  }
-
-  function isDot(stringIndex: number, fretIndex: number) {
-    const f = frets[stringIndex];
-    return f !== null && f > 0 && f === startFret + fretIndex;
   }
 </script>
 

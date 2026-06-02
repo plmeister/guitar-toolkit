@@ -1,16 +1,22 @@
 <script lang="ts">
   import type { NoteEvent } from "$lib/audio/note";
 
-  export let notes: NoteEvent[] = [];
+  let { notes = [] } = $props<{
+    notes: NoteEvent[];
+  }>();
 
-  const strings = ["E", "A", "D", "G", "B", "e"];
+  const STRING_SPACING = 40;
+  const FRET_SPACING = 30;
 </script>
 
 <div class="board">
   {#each notes as n}
     <div
       class="dot"
-      style="left: {n.string * 40}px; top: {n.fret * 30}px"
+      style="
+        left: {n.string * STRING_SPACING}px;
+        top: {n.fret * FRET_SPACING}px;
+      "
     ></div>
   {/each}
 </div>
