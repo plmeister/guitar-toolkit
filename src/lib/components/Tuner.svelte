@@ -93,7 +93,7 @@
 
   <!-- GUITAR NECK -->
   <GuitarNeck
-    strings={activeTuning.strings}
+    strings={activeTuning.strings.slice().reverse()}
     {centsByString}
     selected={selectedString.name}
     onSelect={(s) => {

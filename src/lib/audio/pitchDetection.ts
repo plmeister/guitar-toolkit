@@ -1,7 +1,16 @@
+import Pitchfinder from "pitchfinder";
+
 export type PitchResult = {
   frequency: number;
   confidence: number;
 };
+
+type ProbabilityPitch = {
+  freq: number;
+  probability: number;
+};
+
+const detectorCache = new Map<number, ReturnType<typeof Pitchfinder.Macleod>>();
 
 export function detectPitch(
   buffer: Float32Array,
@@ -13,69 +22,28 @@ export function detectPitch(
     return null;
   }
 
-  const minFreq = 70;
-  const maxFreq = 400;
+  let detector = detectorCache.get(sampleRate);
 
-  const minPeriod = Math.floor(sampleRate / maxFreq);
-  const maxPeriod = Math.floor(sampleRate / minFreq);
+  if (!detector) {
+    detector = Pitchfinder.Macleod({ sampleRate });
+    detectorCache.set(sampleRate, detector);
+  }
 
-  const tauEstimate = yinDifference(buffer, minPeriod, maxPeriod);
+  const result = detector(buffer) as ProbabilityPitch | null;
 
-  if (!tauEstimate) {
+  if (!result) {
     return null;
   }
 
-  const frequency = sampleRate / tauEstimate.period;
+  const { freq, probability } = result;
 
-  return {
-    frequency,
-    confidence: tauEstimate.confidence,
-  };
-}
-
-/**
- * Simplified YIN-style difference search
- */
-function yinDifference(
-  buffer: Float32Array,
-  minTau: number,
-  maxTau: number,
-): { period: number; confidence: number } | null {
-  const n = buffer.length;
-
-  let bestTau = -1;
-  let bestScore = Infinity;
-
-  for (let tau = minTau; tau <= maxTau; tau++) {
-    let sum = 0;
-
-    for (let i = 0; i < n - tau; i++) {
-      const d = buffer[i] - buffer[i + tau];
-      sum += d * d;
-    }
-
-    const score = sum / (n - tau);
-
-    if (score < bestScore) {
-      bestScore = score;
-      bestTau = tau;
-    }
-  }
-
-  if (bestTau === -1) {
-    return null;
-  }
-
-  // crude but effective confidence measure
-  const confidence = Math.max(0, 1 - bestScore * 10);
-
-  if (confidence < 0.4) {
+  if (!Number.isFinite(freq) || freq < 70 || freq > 400) {
     return null;
   }
 
   return {
-    period: bestTau,
-    confidence,
+    frequency: freq,
+    confidence: probability ?? 0,
   };
 }
 

@@ -1,7 +1,11 @@
 import type { StringMatch, Tuning } from "$lib/types";
-let lastString: string | null = null;
 
-const HYSTERESIS_CENTS = 25; // key tuning knob
+let stringScores = new Map<string, number>();
+let lastUpdate = 0;
+
+const DECAY_MS = 120;
+const DECAY_FACTOR = 0.6;
+const SWITCH_THRESHOLD = 25;
 
 export function detectString(
   frequency: number,
@@ -9,62 +13,53 @@ export function detectString(
 ): StringMatch | null {
   if (!frequency || frequency < 20) return null;
 
+  const now = performance.now();
+
+  // decay old state
+  if (now - lastUpdate > DECAY_MS) {
+    for (const [k, v] of stringScores) {
+      stringScores.set(k, v * DECAY_FACTOR);
+    }
+  }
+
+  lastUpdate = now;
+
   const strings = tuning.strings;
 
-  // 1. compute candidates with cents distance
-  const candidates = strings.map((s: any) => {
+  let bestString = "";
+  let bestScore = -Infinity;
+  let bestCents = 0;
+
+  for (const s of strings) {
     const cents = 1200 * Math.log2(frequency / s.frequency);
+    const score = Math.max(0, 100 - Math.abs(cents));
 
+    stringScores.set(s.name, (stringScores.get(s.name) ?? 0) + score);
+
+    if (stringScores.get(s.name)! > bestScore) {
+      bestScore = stringScores.get(s.name)!;
+      bestString = s.name;
+      bestCents = cents;
+    }
+  }
+
+  const sorted = [...stringScores.entries()].sort((a, b) => b[1] - a[1]);
+
+  const top = sorted[0];
+  if (!top) return null;
+
+  const current = sorted[1];
+
+  // hysteresis: prevent rapid flips
+  if (current && top[1] - current[1] < SWITCH_THRESHOLD) {
     return {
-      string: s,
-      cents,
-      absCents: Math.abs(cents),
-    };
-  });
-
-  // 2. sort by closeness
-  candidates.sort((a, b) => a.absCents - b.absCents);
-
-  const best = candidates[0];
-
-  if (!best) return null;
-
-  // 3. first run
-  if (!lastString) {
-    lastString = best.string.name;
-    return {
-      string: best.string,
-      cents: best.cents,
+      string: tuning.strings.find((s) => s.name === bestString)!,
+      cents: bestCents,
     };
   }
 
-  const current = candidates.find((c) => c.string.name === lastString);
-
-  if (!current) {
-    lastString = best.string.name;
-    return {
-      string: best.string,
-      cents: best.cents,
-    };
-  }
-
-  // 4. hysteresis rule:
-  // only switch if clearly better by threshold
-  const shouldSwitch =
-    best.string.name !== lastString &&
-    current.absCents - best.absCents > HYSTERESIS_CENTS;
-
-  if (shouldSwitch) {
-    lastString = best.string.name;
-    return {
-      string: best.string,
-      cents: best.cents,
-    };
-  }
-
-  // 5. otherwise stick to current string
   return {
-    string: current.string,
-    cents: current.cents,
+    string: tuning.strings.find((s) => s.name === top[0])!,
+    cents: bestCents,
   };
 }
